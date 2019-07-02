@@ -1,2 +1,2 @@
 # datasciencecoursera
-![GitHub Logo](/images/proba.png)
+![GitHub Logo](images/proba.png)
