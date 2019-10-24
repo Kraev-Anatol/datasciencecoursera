@@ -1,0 +1,104 @@
+---
+title: 'Course project: Practical Machine Learning'
+author: "Anatoli Kraev"
+date: "10/24/2019"
+output: html_document
+---
+
+## About
+
+This is project for the **Practical Machine Learning** course in Coursera's Data Science specialization.
+The aim of the course project is to create a model of behavior for a group of people involved
+in weightlifting. It is necessary to predict how they did the exercises (the "Classe" variable 
+in the training set). Further information is available on the website: http://groupware.les.inf.puc-rio.br/har
+
+## Loading and preprocessing the data
+```{r}
+library(caret)
+library(rpart)
+if(file.exists("Data/pml-training.csv")){
+  print("File already downloaded")
+} else{
+  train.URL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+  download.file(train.URL, "Data/pml-training.csv")
+}
+
+if(file.exists("Data/pml-testing.csv")){
+  print("File already downloaded")
+} else{
+  test.URL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+  download.file(test.URL, "Data/pml-testing.csv")
+}
+
+Training <- read.csv("Data/pml-training.csv")
+Testing <- read.csv("Data/pml-testing.csv")
+dim(Training); dim(Testing)
+```
+#### Identification and delition Of Near Zero Variance Predictors
+```{r}
+ NZV <- nearZeroVar(Training)
+Training <- Training[, -NZV]
+```
+#### Removing predictors containing more than 95% NA
+```{r}
+ClearColNum <- colSums(is.na(Training))/dim(Training)[1]
+Training <- Training[, ClearColNum < 0.05]
+```
+#### Removing predictors that do not make sense for prediction
+```{r}
+Training <- Training[, -(1 : 6)]
+dim(Training)
+names(Training)
+```
+#### To assess the error of the created model, we will divide the basic training data into training and verification parts
+```{r}
+set.seed(1234)
+inTrain <- createDataPartition(y=Training$classe, p = 0.7, list = FALSE)
+Ttrain <- Training[inTrain, ]
+Ttest <- Training[-inTrain, ]
+dim(Ttrain); dim(Ttest)
+```
+## Model Building
+#### Consider four different model-building algorithms:
+##### 1.Recursive Partitioning And Regression Trees
+##### 2. Bagging
+##### 3. Boosted trees
+##### 4. Random forest
+##### Cross-validation is performed for each Ensemble models (2 ,3, 4)  with K = 3. 
+```{r}
+fitControl <- trainControl(method="cv", number=3, verboseIter=F)
+TreeModel <- rpart(classe ~ ., data=Ttrain, method="class")
+BaggModel <- train(classe ~ ., data=Ttrain, method="treebag", trControl=fitControl)
+GbmModel <- train(classe ~ ., data=Ttrain, method="gbm", trControl=fitControl, verbose = FALSE)
+RfModel <- train(classe ~ ., data=Ttrain, method="rf", trControl=fitControl, ntree=100)
+```
+#### Model Evaluation
+```{r}
+predTREE <- predict(TreeModel, newdata = Ttest, type = "class")
+cmTree <- confusionMatrix(predTREE, Ttest$classe)
+predBAGG <- predict(BaggModel, newdata = Ttest)
+cmBagg <- confusionMatrix(predBAGG, Ttest$classe)
+predGBM <- predict(GbmModel, newdata = Ttest)
+cmGBM <- confusionMatrix(predGBM, Ttest$classe)
+predRF <- predict(RfModel, newdata = Ttest)
+cmRF <- confusionMatrix(predRF, Ttest$classe)
+ResultsAccuracy <- data.frame(Model = c("RPART","BAGGING", "GBM", "RF"),
+                   Accurasy = rbind(cmTree$overall[1], cmBagg$overall[1], cmGBM$overall[1], cmRF$overall[1]))
+print(ResultsAccuracy)
+```
+In our case, it is clear that Ensemble models are superior 
+then Recursive Partitioning And Regression Trees. The best model is Random Forest.
+The confusion matrix Random Forest model is below:
+```{r}
+cmRF$table
+```
+## Prediction
+### Apply the Random Forest model to the validation data: "pml-testing.csv"
+```{r}
+predTesting <- predict(RfModel, newdata = Testing)
+Resut <- data.frame(problem_id = Testing$problem_id, predicted = predTesting)
+print(Resut)
+```
+## Conclusion
+#### Based on the data provided for the project, it was possible to select a model with high accuracy - Random Forest. 
+#### In principle, all the investigated models belonging to the Ensemble showed very good results.
