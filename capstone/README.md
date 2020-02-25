@@ -8,5 +8,5 @@ The goal of the project is to create a model for predicting words based on texts
 ### Links
 
 * Final project implementation (Shiny App): https://kraev.shinyapps.io/Capstone/
-* Final project implementation (Presentation):
+* Final project implementation (Presentation): https://rpubs.com/Anatoli_Kraev/568645
 * Source code files available on (GitHub): https://github.com/Kraev-Anatol/datasciencecoursera/edit/master/capstone/
